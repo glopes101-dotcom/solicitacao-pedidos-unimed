@@ -9,6 +9,7 @@ import os
 import streamlit_authenticator as stauth
 
 # --- CONFIGURAÇÃO DE USUÁRIOS ---
+# Importante: Senhas em texto simples precisam ser tratadas pela biblioteca
 credentials_data = {
     "usernames": {
         "ludmilla.vilela": {"name": "Ludmilla Vilela", "password": "Unimed@540"},
@@ -17,7 +18,6 @@ credentials_data = {
 }
 
 # Criando o objeto de autenticação
-# O parâmetro 'check_hash' deve ser False se as senhas no código não estiverem criptografadas
 authenticator = stauth.Authenticate(
     credentials_data,
     "unimed_cookie",
@@ -25,25 +25,24 @@ authenticator = stauth.Authenticate(
     cookie_expiry_days=30
 )
 
-# --- CHAMADA DE LOGIN CORRIGIDA ---
-# Removendo títulos extras e usando apenas o parâmetro obrigatório
+# --- NOVA FORMA DE LOGIN (SEM ARGUMENTOS QUE CAUSAM ERRO) ---
+# Aqui usamos apenas o parâmetro que a biblioteca exige agora
 authenticator.login(location='main')
 
-# Verificando o status
-if st.session_state["authentication_status"] == False:
+# Verificação de status via Session State (Memória do navegador)
+if st.session_state.get("authentication_status") == False:
     st.error("Usuário ou senha incorretos")
     st.stop()
-elif st.session_state["authentication_status"] == None:
-    st.warning("Por favor, insira seu usuário e senha institucional.")
+elif st.session_state.get("authentication_status") == None:
+    st.warning("Por favor, insira seu usuário e senha institucional para acessar o extrator.")
     st.stop()
 
-# --- SE CHEGOU AQUI, O LOGIN FOI SUCESSO ---
+# --- LOGIN BEM SUCEDIDO ---
 name = st.session_state["name"]
 st.sidebar.title(f"Bem-vindo(a), {name}")
 authenticator.logout("Sair", "sidebar")
 
-# --- RESTANTE DO CÓDIGO (FIREBASE E PDF) ---
-
+# --- INICIALIZAÇÃO DO FIREBASE ---
 diretorio_atual = os.path.dirname(os.path.abspath(__file__))
 caminho_chave = os.path.join(diretorio_atual, "chave.json")
 
@@ -54,8 +53,9 @@ if not firebase_admin._apps:
             'databaseURL': 'https://extracaonadpdf-excel-default-rtdb.firebaseio.com/'
         })
     except Exception as e:
-        st.error(f"Erro ao carregar a chave: {e}")
+        st.error(f"Erro no Firebase: {e}")
 
+# --- INTERFACE DO APP ---
 st.title("💊 SOLICITAÇÃO DE PEDIDOS - UNIMED")
 
 upload = st.file_uploader("Arraste os PDFs aqui", type="pdf", accept_multiple_files=True)
@@ -77,7 +77,6 @@ if upload:
                     paciente = str(campo_paci.get('/V')).strip()
 
                 sufixos = ["", "_2", "_3", "_4", "_5", "_6", "_7", "_8", "_9", "_10", "_11", "_12"]
-                
                 for suf in sufixos:
                     id_qtd = f"Caixa de texto 5{suf}"
                     id_desc = f"Caixa de texto 6{suf}"
@@ -94,7 +93,7 @@ if upload:
                                 "Paciente": paciente,
                                 "Quantidade": qtd,
                                 "Descrição": desc,
-                                "Hora_Importacao": datetime.now().strftime("%H:%M:%S")
+                                "Hora": datetime.now().strftime("%H:%M:%S")
                             }
                             lista_final.append(item_dados)
                             ref_pedidos.push(item_dados)
