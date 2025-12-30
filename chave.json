@@ -1,0 +1,13 @@
+{
+  "type": "service_account",
+  "project_id": "extracaonadpdf-excel",
+  "private_key_id": "3d439d37c5d8ed7cbecdf9876e6305579a11cd81",
+  "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQC5lT1odWHy7RWf\nfz0VuLRUSRUlc7gI2mgqPJpplF3X9JD/JUfzf/MPtPkTR03WCFmDCAAj/RJZEdKG\nT+/IgvBbFetOz7TfDKROcRrW6ar+rtL61sATZ8Ra0uGL7eX+drEvOI8xGNUVL2s8\n0oFo4dDBjYSO/12s/i2iIIOZkWtoVwC8SiSyeIv2XLHp6vJmS6ghube9QY7c9cuB\nyrfgY/3zxW9WE7LU/EXQFrwS1upaksFSnX/md/Zn9Chs0mCHwmWOnIQnl5jj6n6T\n99OfqhM0sHVjJoicW2cZY23OJE8lLkCAqa8j/r6ibnsL0h1H5BbFn4r87ndXs4W0\ncoSqnHy5AgMBAAECggEABhxSeDmh5u5ktMqrKlIu3otFKZAeH5fWGrVB+Kx/NjYS\nE9NN2MgeKtFQwJBWO9rXXFpmK3Pbh7hvwrw9PxBaqtvK/UkXDEodsIyGWkxkNOcb\nliaojpWvMDYQjFDiGWcd7e9c6FGy6x6Tgh5EpGgHvZEeloPKOUDpo+nnU2Y8+mOR\nR+/Yb6BhIKm5/ZvsMeFxgJGz/2XAx4VlFVMnSmadUeTxnR6PN5inI7RQNzuSJbqf\nQ/EBN55ddIcq6Ya5S+8Dfzd/xchBMxTJDivDh6r5xxtS3DipN7C6IQKsBPgk4fJF\nDi1TMN2rzSecaRCznfDqcABxcdplYRUrdh0fOJoYBQKBgQDmM2Fpq56AfIE6yTp7\n/TgQDQiTyVOS8hLqnOSKSWY0bGUevgjMqS/UbOBg9h6SMpOe0H4dfEf0ykhEiMeX\ndKAVvw4naUySsmGa/eWLY9sIrcBT5bF5s0cEehEjWm0SCxEzYNIFi4PHu802tYgK\nXeRBKRAgymDCfKjMsJxMJEs03QKBgQDOYb7HfI646Y7APCc6PMpQBQwu7KI0v+4q\neE1Ya3RVrD1i58Nc8ZhLqNDf+cIx+ux17esCSacOO7w6pdUqIyl/TklFDXUhk9+S\n3x8PkJnZv9IDCR2Ivo5pKJVnZD6TrvXA/31W05X2mGbkTXUqW1bgP7blc5zp0WCb\nlIUBqPhrjQKBgQDMChS43fZCupis63ncNoi/qV3F6HgcUlaz/1aOwBpIMx+6DQSt\nqvSLG+oR53UXbp7r8K8oIWWCMt21aWtH8oaGX+8CvdGyYUwkXhFc6KhXW/KSKpCR\nZ3d2H2AbbuYoTQj0+keNxKiMnAh8CpFHZwuPOf9ioR78pBPWQmB3GOBUPQKBgBVE\nCyWBFy/EmToDuMMOeoZOTtgS+A/ZaxAjP00KHX2qdtTXLtFH77p0FbnOgY0m3vCz\n6FBfCIC19QpSBioGX4NHrNMZtOUV2KbIqOmwq7m9Q0WezdVGVWROkz6JHM2Y7KfL\na73jpYM4ZvnFZXpM2SHYTt9Lz3JkacD+R8pI//gNAoGBAJgQh1i8mzu36rHH4YSm\nPwxgrLvIgpR3zO1kqTqwpjBTUwQuyq7FWLPS+T1N5EwYQuObacwWjVV9H1e0YqwT\nh8+XgDLk+4kwEslHm0/mZDEv/p0r4Qw3lZgJ1vaZmeyMCPNqIwSikzdICGne8C6e\nN7lOiqjd8YKsxITLIk+zIc09\n-----END PRIVATE KEY-----\n",
+  "client_email": "firebase-adminsdk-fbsvc@extracaonadpdf-excel.iam.gserviceaccount.com",
+  "client_id": "109043027129813550752",
+  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+  "token_uri": "https://oauth2.googleapis.com/token",
+  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/firebase-adminsdk-fbsvc%40extracaonadpdf-excel.iam.gserviceaccount.com",
+  "universe_domain": "googleapis.com"
+}
