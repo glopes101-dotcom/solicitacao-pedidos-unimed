@@ -9,51 +9,41 @@ import os
 import streamlit_authenticator as stauth
 
 # --- CONFIGURAÇÃO DE USUÁRIOS ---
-names = ["Ludmilla Vilela", "Gustavo Lopes Rodrigues"]
-usernames = ["ludmilla.vilela", "gustavo.lopes"]
-passwords = ["Unimed@540", "Unimed@540"]
-
-# Criando o dicionário de autenticação no formato novo
-credentials_dict = {
+credentials_data = {
     "usernames": {
-        usernames[0]: {"name": names[0], "password": passwords[0]},
-        usernames[1]: {"name": names[1], "password": passwords[1]}
+        "ludmilla.vilela": {"name": "Ludmilla Vilela", "password": "Unimed@540"},
+        "gustavo.lopes": {"name": "Gustavo Lopes Rodrigues", "password": "Unimed@540"}
     }
 }
 
 # Criando o objeto de autenticação
+# O parâmetro 'check_hash' deve ser False se as senhas no código não estiverem criptografadas
 authenticator = stauth.Authenticate(
-    credentials_dict,
+    credentials_data,
     "unimed_cookie",
     "unimed_key",
     cookie_expiry_days=30
 )
 
-# --- AJUSTE NA LINHA DO ERRO ---
-# Mudamos de "main" para "main" dentro de um parâmetro específico ou apenas chamamos a função
-login_result = authenticator.login(location='main')
+# --- CHAMADA DE LOGIN CORRIGIDA ---
+# Removendo títulos extras e usando apenas o parâmetro obrigatório
+authenticator.login(location='main')
 
-# O retorno agora pode ser diferente dependendo da versão, vamos tratar:
-if isinstance(login_result, tuple):
-    name, authentication_status, username = login_result
-else:
-    # Versões mais recentes tratam o status direto no objeto
-    authentication_status = st.session_state.get("authentication_status")
-    name = st.session_state.get("name")
-    username = st.session_state.get("username")
-
-if authentication_status == False:
+# Verificando o status
+if st.session_state["authentication_status"] == False:
     st.error("Usuário ou senha incorretos")
     st.stop()
-elif authentication_status == None:
+elif st.session_state["authentication_status"] == None:
     st.warning("Por favor, insira seu usuário e senha institucional.")
     st.stop()
 
 # --- SE CHEGOU AQUI, O LOGIN FOI SUCESSO ---
+name = st.session_state["name"]
 st.sidebar.title(f"Bem-vindo(a), {name}")
 authenticator.logout("Sair", "sidebar")
 
-# Configuração do Firebase e resto do código (Mantido igual)
+# --- RESTANTE DO CÓDIGO (FIREBASE E PDF) ---
+
 diretorio_atual = os.path.dirname(os.path.abspath(__file__))
 caminho_chave = os.path.join(diretorio_atual, "chave.json")
 
@@ -64,7 +54,7 @@ if not firebase_admin._apps:
             'databaseURL': 'https://extracaonadpdf-excel-default-rtdb.firebaseio.com/'
         })
     except Exception as e:
-        st.error(f"Erro ao carregar a chave do Firebase: {e}")
+        st.error(f"Erro ao carregar a chave: {e}")
 
 st.title("💊 SOLICITAÇÃO DE PEDIDOS - UNIMED")
 
@@ -110,13 +100,11 @@ if upload:
                             ref_pedidos.push(item_dados)
         
         if lista_final:
-            st.success(f"✅ Itens processados com sucesso!")
+            st.success(f"✅ Itens processados!")
             df = pd.DataFrame(lista_final)
             st.table(df)
             
-            data_hoje_arquivo = datetime.now().strftime("%d%m%Y")
-            nome_excel = f"PedidoNAD_{data_hoje_arquivo}.xlsx"
-            
+            nome_excel = f"PedidoNAD_{datetime.now().strftime('%d%m%Y')}.xlsx"
             output = BytesIO()
             with pd.ExcelWriter(output, engine='openpyxl') as writer:
                 df.to_excel(writer, index=False)
