@@ -6,39 +6,39 @@ from datetime import datetime
 import firebase_admin
 from firebase_admin import credentials, db
 import os
+import streamlit_authenticator as stauth
 
-# --- FUNÇÃO DE SEGURANÇA (LOGIN) ---
-def check_password():
-    """Retorna True se o usuário inseriu a senha correta."""
-    def password_entered():
-        # --- ALTERE SUA SENHA AQUI ---
-        if st.session_state["password"] == "Unimed@2025":
-            st.session_state["password_correct"] = True
-            del st.session_state["password"]  # Limpa a senha da memória
-        else:
-            st.session_state["password_correct"] = False
+# --- CONFIGURAÇÃO DE USUÁRIOS ---
+# Aqui cadastramos a Ludmilla e você. A senha padrão é Unimed@540
+names = ["Ludmilla Vilela", "Gustavo Lopes Rodrigues"]
+usernames = ["ludmilla.vilela", "gustavo.lopes"]
+# As senhas no Authenticator precisam estar criptografadas ou em texto simples (neste caso simplificado)
+passwords = ["Unimed@540", "Unimed@540"]
 
-    if "password_correct" not in st.session_state:
-        # Primeira vez: pede a senha
-        st.info("Acesso Restrito: Identifique-se para continuar.")
-        st.text_input("Digite a senha de acesso", type="password", on_change=password_entered, key="password")
-        return False
-    elif not st.session_state["password_correct"]:
-        # Senha errada
-        st.text_input("Senha incorreta. Tente novamente", type="password", on_change=password_entered, key="password")
-        st.error("🔒 Acesso Negado")
-        return False
-    else:
-        # Senha correta
-        return True
+# Criando o objeto de autenticação
+authenticator = stauth.Authenticate(
+    {"usernames": {
+        usernames[0]: {"name": names[0], "password": passwords[0]},
+        usernames[1]: {"name": names[1], "password": passwords[1]}
+    }},
+    "unimed_cookie", "unimed_key", cookie_expiry_days=30
+)
 
-# Bloqueia o app se não estiver logado
-if not check_password():
+# Renderiza a tela de login
+name, authentication_status, username = authenticator.login("Login - Extrator Unimed", "main")
+
+if authentication_status == False:
+    st.error("Usuário ou senha incorretos")
+    st.stop()
+elif authentication_status == None:
+    st.warning("Por favor, insira seu e-mail e senha institucional.")
     st.stop()
 
-# --- ABAIXO: CÓDIGO DO SISTEMA (SÓ RODA SE A SENHA ESTIVER CORRETA) ---
+# --- SE CHEGOU AQUI, O LOGIN FOI SUCESSO ---
+st.sidebar.title(f"Bem-vindo(a), {name}")
+authenticator.logout("Sair", "sidebar")
 
-# Localizar a chave na pasta (Certifique-se que o arquivo chave.json está no GitHub)
+# Localizar a chave na pasta
 diretorio_atual = os.path.dirname(os.path.abspath(__file__))
 caminho_chave = os.path.join(diretorio_atual, "chave.json")
 
@@ -50,11 +50,10 @@ if not firebase_admin._apps:
             'databaseURL': 'https://extracaonadpdf-excel-default-rtdb.firebaseio.com/'
         })
     except Exception as e:
-        st.error(f"Erro ao carregar a chave: {e}")
+        st.error(f"Erro ao carregar a chave do Firebase: {e}")
 
-st.set_page_config(page_title="SOLICITAÇÃO DE PEDIDOS", layout="wide")
 st.title("💊 SOLICITAÇÃO DE PEDIDOS - UNIMED")
-st.sidebar.success(f"Logado em: {datetime.now().strftime('%d/%m/%Y')}")
+st.write(f"Usuário logado: **{name}**")
 
 upload = st.file_uploader("Arraste os PDFs aqui", type="pdf", accept_multiple_files=True)
 
@@ -89,17 +88,17 @@ if upload:
                         
                         if qtd and qtd.upper() != "/OFF" and desc and desc.upper() != "/OFF":
                             item_dados = {
+                                "Farmaceutico": name, # Agora sabemos quem enviou!
                                 "Paciente": paciente,
                                 "Quantidade": qtd,
                                 "Descrição": desc,
-                                "Hora_Importacao": datetime.now().strftime("%H:%M:%S"),
-                                "Arquivo": arq.name
+                                "Hora_Importacao": datetime.now().strftime("%H:%M:%S")
                             }
                             lista_final.append(item_dados)
                             ref_pedidos.push(item_dados)
         
         if lista_final:
-            st.success(f"✅ {len(lista_final)} itens processados com sucesso!")
+            st.success(f"✅ {len(lista_final)} itens processados por {name}!")
             df = pd.DataFrame(lista_final)
             st.table(df)
             
