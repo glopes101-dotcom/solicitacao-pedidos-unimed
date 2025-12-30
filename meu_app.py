@@ -9,40 +9,54 @@ import os
 import streamlit_authenticator as stauth
 
 # --- CONFIGURAÇÃO DE USUÁRIOS ---
-# Aqui cadastramos a Ludmilla e você. A senha padrão é Unimed@540
 names = ["Ludmilla Vilela", "Gustavo Lopes Rodrigues"]
 usernames = ["ludmilla.vilela", "gustavo.lopes"]
-# As senhas no Authenticator precisam estar criptografadas ou em texto simples (neste caso simplificado)
 passwords = ["Unimed@540", "Unimed@540"]
+
+# Criando o dicionário de autenticação no formato novo
+credentials_dict = {
+    "usernames": {
+        usernames[0]: {"name": names[0], "password": passwords[0]},
+        usernames[1]: {"name": names[1], "password": passwords[1]}
+    }
+}
 
 # Criando o objeto de autenticação
 authenticator = stauth.Authenticate(
-    {"usernames": {
-        usernames[0]: {"name": names[0], "password": passwords[0]},
-        usernames[1]: {"name": names[1], "password": passwords[1]}
-    }},
-    "unimed_cookie", "unimed_key", cookie_expiry_days=30
+    credentials_dict,
+    "unimed_cookie",
+    "unimed_key",
+    cookie_expiry_days=30
 )
 
-# Renderiza a tela de login
-name, authentication_status, username = authenticator.login("Login - Extrator Unimed", "main")
+# --- AJUSTE NA LINHA DO ERRO ---
+# Mudamos de "main" para "main" dentro de um parâmetro específico ou apenas chamamos a função
+login_result = authenticator.login(location='main')
+
+# O retorno agora pode ser diferente dependendo da versão, vamos tratar:
+if isinstance(login_result, tuple):
+    name, authentication_status, username = login_result
+else:
+    # Versões mais recentes tratam o status direto no objeto
+    authentication_status = st.session_state.get("authentication_status")
+    name = st.session_state.get("name")
+    username = st.session_state.get("username")
 
 if authentication_status == False:
     st.error("Usuário ou senha incorretos")
     st.stop()
 elif authentication_status == None:
-    st.warning("Por favor, insira seu e-mail e senha institucional.")
+    st.warning("Por favor, insira seu usuário e senha institucional.")
     st.stop()
 
 # --- SE CHEGOU AQUI, O LOGIN FOI SUCESSO ---
 st.sidebar.title(f"Bem-vindo(a), {name}")
 authenticator.logout("Sair", "sidebar")
 
-# Localizar a chave na pasta
+# Configuração do Firebase e resto do código (Mantido igual)
 diretorio_atual = os.path.dirname(os.path.abspath(__file__))
 caminho_chave = os.path.join(diretorio_atual, "chave.json")
 
-# Configuração do Firebase
 if not firebase_admin._apps:
     try:
         cred = credentials.Certificate(caminho_chave)
@@ -53,7 +67,6 @@ if not firebase_admin._apps:
         st.error(f"Erro ao carregar a chave do Firebase: {e}")
 
 st.title("💊 SOLICITAÇÃO DE PEDIDOS - UNIMED")
-st.write(f"Usuário logado: **{name}**")
 
 upload = st.file_uploader("Arraste os PDFs aqui", type="pdf", accept_multiple_files=True)
 
@@ -78,7 +91,6 @@ if upload:
                 for suf in sufixos:
                     id_qtd = f"Caixa de texto 5{suf}"
                     id_desc = f"Caixa de texto 6{suf}"
-                    
                     campo_qtd = campos.get(id_qtd)
                     campo_desc = campos.get(id_desc)
                     
@@ -88,7 +100,7 @@ if upload:
                         
                         if qtd and qtd.upper() != "/OFF" and desc and desc.upper() != "/OFF":
                             item_dados = {
-                                "Farmaceutico": name, # Agora sabemos quem enviou!
+                                "Farmaceutico": name,
                                 "Paciente": paciente,
                                 "Quantidade": qtd,
                                 "Descrição": desc,
@@ -98,7 +110,7 @@ if upload:
                             ref_pedidos.push(item_dados)
         
         if lista_final:
-            st.success(f"✅ {len(lista_final)} itens processados por {name}!")
+            st.success(f"✅ Itens processados com sucesso!")
             df = pd.DataFrame(lista_final)
             st.table(df)
             
