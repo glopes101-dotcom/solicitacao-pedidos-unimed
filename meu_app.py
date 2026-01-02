@@ -5,11 +5,10 @@ from io import BytesIO
 from datetime import datetime
 import firebase_admin
 from firebase_admin import credentials, db
-import os
+import json
 import streamlit_authenticator as stauth
 
-# --- CONFIGURAÇÃO DE USUÁRIOS ---
-# Importante: Senhas em texto simples precisam ser tratadas pela biblioteca
+# 1. CONFIGURAÇÃO DE LOGIN
 credentials_data = {
     "usernames": {
         "ludmilla.vilela": {"name": "Ludmilla Vilela", "password": "Unimed@540"},
@@ -17,98 +16,85 @@ credentials_data = {
     }
 }
 
-# Criando o objeto de autenticação
-authenticator = stauth.Authenticate(
-    credentials_data,
-    "unimed_cookie",
-    "unimed_key",
-    cookie_expiry_days=30
-)
+# Inicializa o autenticador
+authenticator = stauth.Authenticate(credentials_data, "unimed_cookie", "unimed_key", cookie_expiry_days=30)
 
-# --- NOVA FORMA DE LOGIN (SEM ARGUMENTOS QUE CAUSAM ERRO) ---
-# Aqui usamos apenas o parâmetro que a biblioteca exige agora
+# Tela de Login
 authenticator.login(location='main')
 
-# Verificação de status via Session State (Memória do navegador)
-if st.session_state.get("authentication_status") == False:
+if st.session_state.get("authentication_status") is False:
     st.error("Usuário ou senha incorretos")
     st.stop()
-elif st.session_state.get("authentication_status") == None:
-    st.warning("Por favor, insira seu usuário e senha institucional para acessar o extrator.")
+elif st.session_state.get("authentication_status") is None:
+    st.warning("Por favor, insira seu usuário e senha institucional.")
     st.stop()
 
-# --- LOGIN BEM SUCEDIDO ---
+# --- LOGIN SUCESSO ---
 name = st.session_state["name"]
-st.sidebar.title(f"Bem-vindo(a), {name}")
+st.sidebar.title(f"Olá, {name}")
 authenticator.logout("Sair", "sidebar")
 
-# --- INICIALIZAÇÃO DO FIREBASE ---
-diretorio_atual = os.path.dirname(os.path.abspath(__file__))
-caminho_chave = os.path.join(diretorio_atual, "chave.json")
-
+# 2. CONEXÃO COM O FIREBASE (MODO NUVEM)
 if not firebase_admin._apps:
     try:
-        cred = credentials.Certificate(caminho_chave)
+        # Tenta ler do "Cofre" do Streamlit primeiro
+        if "firebase" in st.secrets:
+            # Converte a string do segredo em dicionário
+            firebase_info = json.loads(st.secrets["firebase"]["key"])
+            cred = credentials.Certificate(firebase_info)
+        else:
+            # Se não achar o segredo, tenta o arquivo local (para seu teste no PC)
+            cred = credentials.Certificate("chave.json")
+            
         firebase_admin.initialize_app(cred, {
             'databaseURL': 'https://extracaonadpdf-excel-default-rtdb.firebaseio.com/'
         })
     except Exception as e:
-        st.error(f"Erro no Firebase: {e}")
+        st.error(f"Erro de conexão com o Banco de Dados: {e}")
 
-# --- INTERFACE DO APP ---
-st.title("💊 SOLICITAÇÃO DE PEDIDOS - UNIMED")
+# 3. INTERFACE DO SISTEMA
+st.title("💊 EXTRATOR DE PEDIDOS - UNIMED")
 
 upload = st.file_uploader("Arraste os PDFs aqui", type="pdf", accept_multiple_files=True)
 
 if upload:
     lista_final = []
     try:
-        data_hoje_db = datetime.now().strftime("%Y-%m-%d")
-        ref_pedidos = db.reference(f'pedidos/{data_hoje_db}')
+        data_hoje = datetime.now().strftime("%Y-%m-%d")
+        ref_pedidos = db.reference(f'pedidos/{data_hoje}')
 
         for arq in upload:
             reader = PdfReader(arq)
             campos = reader.get_fields()
-            
             if campos:
-                paciente = "Não encontrado"
-                campo_paci = campos.get("Caixa de texto 4_3")
-                if campo_paci and campo_paci.get('/V'):
-                    paciente = str(campo_paci.get('/V')).strip()
-
+                paci = campos.get("Caixa de texto 4_3", {}).get('/V', "Não encontrado")
                 sufixos = ["", "_2", "_3", "_4", "_5", "_6", "_7", "_8", "_9", "_10", "_11", "_12"]
-                for suf in sufixos:
-                    id_qtd = f"Caixa de texto 5{suf}"
-                    id_desc = f"Caixa de texto 6{suf}"
-                    campo_qtd = campos.get(id_qtd)
-                    campo_desc = campos.get(id_desc)
+                
+                for s in sufixos:
+                    qtd = campos.get(f"Caixa de texto 5{s}", {}).get('/V')
+                    desc = campos.get(f"Caixa de texto 6{s}", {}).get('/V')
                     
-                    if campo_qtd and campo_desc:
-                        qtd = str(campo_qtd.get('/V', '')).strip()
-                        desc = str(campo_desc.get('/V', '')).strip()
-                        
-                        if qtd and qtd.upper() != "/OFF" and desc and desc.upper() != "/OFF":
-                            item_dados = {
-                                "Farmaceutico": name,
-                                "Paciente": paciente,
-                                "Quantidade": qtd,
-                                "Descrição": desc,
-                                "Hora": datetime.now().strftime("%H:%M:%S")
-                            }
-                            lista_final.append(item_dados)
-                            ref_pedidos.push(item_dados)
+                    if qtd and desc and str(qtd).upper() != "/OFF":
+                        item = {
+                            "Farmaceutico": name,
+                            "Paciente": str(paci),
+                            "Quantidade": str(qtd),
+                            "Descricao": str(desc),
+                            "Hora": datetime.now().strftime("%H:%M:%S")
+                        }
+                        lista_final.append(item)
+                        ref_pedidos.push(item) # Envia para o Firebase
         
         if lista_final:
-            st.success(f"✅ Itens processados!")
+            st.success(f"✅ {len(lista_final)} itens processados!")
             df = pd.DataFrame(lista_final)
             st.table(df)
             
-            nome_excel = f"PedidoNAD_{datetime.now().strftime('%d%m%Y')}.xlsx"
+            # Gerar Excel para baixar
             output = BytesIO()
             with pd.ExcelWriter(output, engine='openpyxl') as writer:
                 df.to_excel(writer, index=False)
-            
-            st.download_button(f"📥 Baixar Planilha {nome_excel}", output.getvalue(), nome_excel)
+            st.download_button("📥 Baixar Planilha Excel", output.getvalue(), "Pedido_Unimed.xlsx")
 
     except Exception as e:
         st.error(f"Erro no processamento: {e}")
