@@ -4,13 +4,12 @@ import pandas as pd
 from io import BytesIO
 from datetime import datetime
 
-# Configuração da página
+# Configuração visual do site
 st.set_page_config(page_title="Conversor NAD", layout="wide")
+st.title("💊 SISTEMA DE EXTRAÇÃO NAD - UNIMED")
+st.write("Versão Simplificada: Converta seus PDFs em Excel instantaneamente.")
 
-st.title("💊 SISTEMA DE EXTRAÇÃO NAD - VERSÃO LOCAL")
-st.write("Suba os PDFs e baixe a planilha. (Nenhum dado é salvo na nuvem)")
-
-# Upload de arquivos
+# Campo para subir os arquivos
 upload = st.file_uploader("Arraste os PDFs aqui", type="pdf", accept_multiple_files=True)
 
 if upload:
@@ -22,13 +21,13 @@ if upload:
             campos = reader.get_fields()
             
             if campos:
-                # Localiza o paciente
+                # Busca o nome do paciente
                 paciente = "Não encontrado"
                 campo_paci = campos.get("Caixa de texto 4_3")
                 if campo_paci and campo_paci.get('/V'):
                     paciente = str(campo_paci.get('/V')).strip()
 
-                # Percorre as 12 linhas do formulário
+                # Percorre as 12 linhas do formulário NAD
                 sufixos = ["", "_2", "_3", "_4", "_5", "_6", "_7", "_8", "_9", "_10", "_11", "_12"]
                 
                 for suf in sufixos:
@@ -39,23 +38,23 @@ if upload:
                         qtd = str(campo_qtd.get('/V', '')).strip()
                         desc = str(campo_desc.get('/V', '')).strip()
                         
-                        # Filtra apenas linhas com conteúdo
+                        # Só adiciona se tiver quantidade e descrição (pula linhas vazias)
                         if qtd and desc and qtd.upper() != "/OFF":
                             lista_final.append({
                                 "Paciente": paciente,
                                 "Quantidade": qtd,
                                 "Descrição": desc,
-                                "Arquivo Origem": arq.name
+                                "Arquivo": arq.name
                             })
         
         if lista_final:
-            st.success(f"✅ {len(lista_final)} itens extraídos com sucesso!")
+            st.success(f"✅ {len(lista_final)} itens extraídos!")
             df = pd.DataFrame(lista_final)
             
-            # Exibe os dados na tela para conferência
+            # Mostra a tabela na tela
             st.dataframe(df, use_container_width=True)
             
-            # Preparar o download do Excel
+            # Gera o arquivo Excel
             output = BytesIO()
             with pd.ExcelWriter(output, engine='openpyxl') as writer:
                 df.to_excel(writer, index=False)
@@ -63,11 +62,11 @@ if upload:
             st.download_button(
                 label="📥 BAIXAR PLANILHA EXCEL",
                 data=output.getvalue(),
-                file_name=f"Relatorio_NAD_{datetime.now().strftime('%d-%m-%Y')}.xlsx",
+                file_name=f"Pedido_NAD_{datetime.now().strftime('%d-%m-%Y')}.xlsx",
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
             )
         else:
-            st.warning("Nenhum dado válido foi encontrado nos PDFs enviados.")
+            st.warning("Nenhum dado encontrado dentro dos campos esperados do PDF.")
 
     except Exception as e:
-        st.error(f"Erro ao processar: {e}")
+        st.error(f"Erro técnico ao ler o PDF: {e}")
