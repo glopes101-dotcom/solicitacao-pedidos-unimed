@@ -1,6 +1,5 @@
 streamlit
 pypdf
 pandas
-firebase-admin
-streamlit-authenticator
 openpyxl
+firebase-admin
