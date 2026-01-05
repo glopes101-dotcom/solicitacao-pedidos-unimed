@@ -4,69 +4,68 @@ import pandas as pd
 from io import BytesIO
 from datetime import datetime
 
-# Configuração visual do site
-st.set_page_config(page_title="Conversor NAD", layout="wide")
-st.title("💊 SISTEMA DE EXTRAÇÃO NAD - UNIMED")
-st.write("Versão Simplificada: Converta seus PDFs em Excel instantaneamente.")
+# Configuração da página
+st.set_page_config(page_title="Conversor NAD", layout="centered")
 
-# Campo para subir os arquivos
-upload = st.file_uploader("Arraste os PDFs aqui", type="pdf", accept_multiple_files=True)
+st.title("💊 Conversor de Pedidos NAD")
+st.write("Transforme seus PDFs em planilhas Excel instantaneamente.")
 
-if upload:
-    lista_final = []
+# 1. Upload dos arquivos
+arquivos_pdf = st.file_uploader("Selecione os arquivos PDF", type="pdf", accept_multiple_files=True)
+
+if arquivos_pdf:
+    dados_extraidos = []
     
-    try:
-        for arq in upload:
-            reader = PdfReader(arq)
-            campos = reader.get_fields()
+    for pdf in arquivos_pdf:
+        try:
+            leitor = PdfReader(pdf)
+            campos = leitor.get_fields()
             
             if campos:
-                # Busca o nome do paciente
-                paciente = "Não encontrado"
+                # Pega o nome do paciente (ajuste o ID se necessário)
+                paciente = "Não Identificado"
                 campo_paci = campos.get("Caixa de texto 4_3")
                 if campo_paci and campo_paci.get('/V'):
                     paciente = str(campo_paci.get('/V')).strip()
 
-                # Percorre as 12 linhas do formulário NAD
+                # Percorre as 12 linhas do formulário padrão
                 sufixos = ["", "_2", "_3", "_4", "_5", "_6", "_7", "_8", "_9", "_10", "_11", "_12"]
                 
                 for suf in sufixos:
-                    campo_qtd = campos.get(f"Caixa de texto 5{suf}")
-                    campo_desc = campos.get(f"Caixa de texto 6{suf}")
+                    qtd = campos.get(f"Caixa de texto 5{suf}")
+                    desc = campos.get(f"Caixa de texto 6{suf}")
                     
-                    if campo_qtd and campo_desc:
-                        qtd = str(campo_qtd.get('/V', '')).strip()
-                        desc = str(campo_desc.get('/V', '')).strip()
+                    if qtd and desc:
+                        v_qtd = str(qtd.get('/V', '')).strip()
+                        v_desc = str(desc.get('/V', '')).strip()
                         
-                        # Só adiciona se tiver quantidade e descrição (pula linhas vazias)
-                        if qtd and desc and qtd.upper() != "/OFF":
-                            lista_final.append({
+                        # Só adiciona se tiver texto na descrição e quantidade
+                        if v_qtd and v_desc and v_qtd.upper() != "/OFF":
+                            dados_extraidos.append({
                                 "Paciente": paciente,
-                                "Quantidade": qtd,
-                                "Descrição": desc,
-                                "Arquivo": arq.name
+                                "Qtd": v_qtd,
+                                "Medicamento/Item": v_desc,
+                                "Origem": pdf.name
                             })
-        
-        if lista_final:
-            st.success(f"✅ {len(lista_final)} itens extraídos!")
-            df = pd.DataFrame(lista_final)
-            
-            # Mostra a tabela na tela
-            st.dataframe(df, use_container_width=True)
-            
-            # Gera o arquivo Excel
-            output = BytesIO()
-            with pd.ExcelWriter(output, engine='openpyxl') as writer:
-                df.to_excel(writer, index=False)
-            
-            st.download_button(
-                label="📥 BAIXAR PLANILHA EXCEL",
-                data=output.getvalue(),
-                file_name=f"Pedido_NAD_{datetime.now().strftime('%d-%m-%Y')}.xlsx",
-                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-            )
-        else:
-            st.warning("Nenhum dado encontrado dentro dos campos esperados do PDF.")
+        except Exception as e:
+            st.error(f"Erro ao ler o arquivo {pdf.name}: {e}")
 
-    except Exception as e:
-        st.error(f"Erro técnico ao ler o PDF: {e}")
+    # 2. Exibição e Download
+    if dados_extraidos:
+        st.success(f"Sucesso! {len(dados_extraidos)} itens encontrados.")
+        df = pd.DataFrame(dados_extraidos)
+        
+        # Mostra a tabela para conferência
+        st.dataframe(df, use_container_width=True)
+        
+        # Cria o arquivo Excel na memória
+        output = BytesIO()
+        with pd.ExcelWriter(output, engine='openpyxl') as writer:
+            df.to_excel(writer, index=False)
+        
+        st.download_button(
+            label="📥 BAIXAR PLANILHA EXCEL",
+            data=output.getvalue(),
+            file_name=f"Pedido_NAD_{datetime.now().strftime('%d-%m-%Y')}.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
