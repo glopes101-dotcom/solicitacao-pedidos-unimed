@@ -2,4 +2,3 @@ streamlit
 pypdf
 pandas
 openpyxl
-firebase-admin
