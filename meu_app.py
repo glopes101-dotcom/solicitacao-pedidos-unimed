@@ -6,20 +6,18 @@ from datetime import datetime
 import firebase_admin
 from firebase_admin import credentials, db
 import json
-import os
 
-# --- CONFIGURAÇÃO DO FIREBASE (Híbrida: Nuvem + Local) ---
+# --- CONFIGURAÇÃO DO FIREBASE ---
 def inicializar_firebase():
     if not firebase_admin._apps:
         try:
-            # Se encontrar a configuração na nuvem (Secrets)
+            # Tenta pegar dos Secrets (Nuvem)
             if "firebase" in st.secrets:
-                # Lê o texto bruto e transforma em dicionário Python
                 info_json = st.secrets["firebase"]["info"]
                 key_dict = json.loads(info_json)
                 cred = credentials.Certificate(key_dict)
             else:
-                # Se estiver rodando local no seu PC
+                # Se rodar local, procura o arquivo na mesma pasta
                 cred = credentials.Certificate("chave.json")
                 
             firebase_admin.initialize_app(cred, {
@@ -30,9 +28,8 @@ def inicializar_firebase():
 
 inicializar_firebase()
 
-# --- INTERFACE ---
-st.set_page_config(page_title="SOLICITAÇÃO DE PEDIDOS", layout="wide")
-st.title("💊 SISTEMA DE EXTRAÇÃO NAD - UNIMED")
+st.set_page_config(page_title="Extração NAD", layout="wide")
+st.title("💊 Sistema de Extração NAD")
 
 upload = st.file_uploader("Arraste os PDFs aqui", type="pdf", accept_multiple_files=True)
 
@@ -41,11 +38,9 @@ if upload:
     try:
         data_hoje_db = datetime.now().strftime("%Y-%m-%d")
         ref_pedidos = db.reference(f'pedidos/{data_hoje_db}')
-
         for arq in upload:
             reader = PdfReader(arq)
             campos = reader.get_fields()
-            
             if campos:
                 paciente = "Não encontrado"
                 campo_paci = campos.get("Caixa de texto 4_3")
@@ -54,34 +49,25 @@ if upload:
 
                 sufixos = ["", "_2", "_3", "_4", "_5", "_6", "_7", "_8", "_9", "_10", "_11", "_12"]
                 for suf in sufixos:
-                    id_qtd = f"Caixa de texto 5{suf}"
-                    id_desc = f"Caixa de texto 6{suf}"
-                    campo_qtd = campos.get(id_qtd)
-                    campo_desc = campos.get(id_desc)
-                    
-                    if campo_qtd and campo_desc:
-                        qtd = str(campo_qtd.get('/V', '')).strip()
-                        desc = str(campo_desc.get('/V', '')).strip()
-                        if qtd and desc and qtd.upper() != "/OFF" and desc.upper() != "/OFF":
-                            item_dados = {
-                                "Paciente": paciente, "Quantidade": qtd, "Descrição": desc,
-                                "Hora": datetime.now().strftime("%H:%M:%S"), "Arquivo": arq.name
-                            }
-                            lista_final.append(item_dados)
-                            ref_pedidos.push(item_dados)
-        
+                    qtd = campos.get(f"Caixa de texto 5{suf}")
+                    desc = campos.get(f"Caixa de texto 6{suf}")
+                    if qtd and desc:
+                        v_qtd = str(qtd.get('/V', '')).strip()
+                        v_desc = str(desc.get('/V', '')).strip()
+                        if v_qtd and v_desc and v_qtd.upper() != "/OFF":
+                            item = {"Paciente": paciente, "Qtd": v_qtd, "Medicamento": v_desc}
+                            lista_final.append(item)
+                            ref_pedidos.push(item)
         if lista_final:
-            st.success(f"✅ {len(lista_final)} itens processados!")
             df = pd.DataFrame(lista_final)
             st.table(df)
-            
             output = BytesIO()
             with pd.ExcelWriter(output, engine='openpyxl') as writer:
                 df.to_excel(writer, index=False)
-            
-            st.download_button("📥 Baixar Planilha Excel", output.getvalue(), f"Pedido_{datetime.now().strftime('%d%m%Y')}.xlsx")
-
+            st.download_button("Baixar Excel", output.getvalue(), "pedido.xlsx")
     except Exception as e:
         st.error(f"Erro: {e}")
+
+
 
 
