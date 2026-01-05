@@ -12,12 +12,14 @@ import os
 def inicializar_firebase():
     if not firebase_admin._apps:
         try:
+            # Se encontrar a configuração na nuvem (Secrets)
             if "firebase" in st.secrets:
-                # Carrega o JSON inteiro de uma vez
+                # Lê o texto bruto e transforma em dicionário Python
                 info_json = st.secrets["firebase"]["info"]
                 key_dict = json.loads(info_json)
                 cred = credentials.Certificate(key_dict)
             else:
+                # Se estiver rodando local no seu PC
                 cred = credentials.Certificate("chave.json")
                 
             firebase_admin.initialize_app(cred, {
@@ -81,4 +83,5 @@ if upload:
 
     except Exception as e:
         st.error(f"Erro: {e}")
+
 
